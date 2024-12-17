@@ -1,1 +1,86 @@
 version: '3.8'
+
+services:
+  # Service Auth
+  auth-service:
+    image: registry.example.com/auth-service:latest
+    ports:
+      - "3001:3000"
+    environment:
+      - JWT_SECRET=${JWT_SECRET}
+      - MONGO_URI=${MONGODB_URI}/auth
+      - NODE_ENV=production
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+    depends_on:
+      - mongo
+
+  # Service Product
+  product-service:
+    image: registry.example.com/product-service:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - JWT_SECRET=${JWT_SECRET}
+      - MONGO_URI=${MONGODB_URI}/ecommerce
+      - NODE_ENV=production
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+    depends_on:
+      - mongo
+
+  # Service Order
+  order-service:
+    image: registry.example.com/order-service:latest
+    ports:
+      - "3002:3000"
+    environment:
+      - JWT_SECRET=${JWT_SECRET}
+      - MONGO_URI=${MONGODB_URI}/orders
+      - NODE_ENV=production
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+    depends_on:
+      - mongo
+
+  # Frontend Vue.js
+  frontend:
+    image: registry.example.com/frontend:latest
+    ports:
+      - "80:80"
+    environment:
+      - VITE_PRODUCT_SERVICE_URL=${VITE_PRODUCT_SERVICE_URL}
+      - VITE_AUTH_SERVICE_URL=${VITE_AUTH_SERVICE_URL}
+      - VITE_ORDER_SERVICE_URL=${VITE_ORDER_SERVICE_URL}
+      - MONGO_URI=${MONGODB_URI}/ecommerce
+      - JWT_SECRET=${JWT_SECRET}
+      - NODE_ENV=production
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+    depends_on:
+      - auth-service
+      - product-service
+      - order-service
+
+  # MongoDB centralisé pour tous les services
+  mongo:
+    image: mongo:6
+    volumes:
+      - mongo-data:/data/db
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=admin_password
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+
+volumes:
+  mongo-data:

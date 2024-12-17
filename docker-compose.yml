@@ -1,1 +1,82 @@
 version: '3.8'
+
+services:
+  # Service Auth
+  auth-service:
+    build: ./services/auth-service
+    ports:
+      - "3001:3000"
+    environment:
+      - JWT_SECRET=${JWT_SECRET}
+      - MONGO_URI=${MONGODB_URI}/auth
+      - NODE_ENV=development
+    volumes:
+      - ./services/auth-service:/app
+      - /app/node_modules
+    depends_on:
+      - mongo
+
+  # Service Product
+  product-service:
+    build: ./services/product-service
+    ports:
+      - "3000:3000"
+    environment:
+      - JWT_SECRET=${JWT_SECRET}
+      - MONGO_URI=${MONGODB_URI}/ecommerce
+      - NODE_ENV=development
+    volumes:
+      - ./services/product-service:/app
+      - /app/node_modules
+    depends_on:
+      - mongo
+
+  # Service Order
+  order-service:
+    build: ./services/order-service
+    ports:
+      - "3002:3000"
+    environment:
+      - JWT_SECRET=${JWT_SECRET}
+      - MONGO_URI=${MONGODB_URI}/orders
+      - NODE_ENV=development
+    volumes:
+      - ./services/order-service:/app
+      - /app/node_modules
+    depends_on:
+      - mongo
+
+  # Frontend Vue.js
+  frontend:
+    build: ./frontend
+    ports:
+      - "8080:80"
+    environment:
+      - VITE_PRODUCT_SERVICE_URL=${VITE_PRODUCT_SERVICE_URL}
+      - VITE_AUTH_SERVICE_URL=${VITE_AUTH_SERVICE_URL}
+      - VITE_ORDER_SERVICE_URL=${VITE_ORDER_SERVICE_URL}
+      - MONGO_URI=${MONGODB_URI}/ecommerce
+      - JWT_SECRET=${JWT_SECRET}
+      - NODE_ENV=development
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - auth-service
+      - product-service
+      - order-service
+
+  # MongoDB pour tous les services
+  mongo:
+    image: mongo:6
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=admin_password
+    restart: always
+
+volumes:
+  mongo-data:
